@@ -16,15 +16,27 @@ enum SlideKey {
     }
 }
 
-func sendKey(_ key: SlideKey) {
+/// Deliver the key stroke.
+///
+/// When a Teams screen share is running, its floating control bar takes
+/// keyboard focus, so an event posted to the global HID tap lands in Teams
+/// instead of the slideshow. Posting straight to the target process bypasses
+/// focus entirely, which keeps the remote working while sharing.
+func sendKey(_ key: SlideKey, toPid pid: pid_t?) {
     guard let src = CGEventSource(stateID: .hidSystemState) else {
         NSLog("PPTRemote: could not create event source")
         return
     }
     let down = CGEvent(keyboardEventSource: src, virtualKey: key.virtualKey, keyDown: true)
     let up = CGEvent(keyboardEventSource: src, virtualKey: key.virtualKey, keyDown: false)
-    down?.post(tap: .cghidEventTap)
-    up?.post(tap: .cghidEventTap)
+
+    if let pid {
+        down?.postToPid(pid)
+        up?.postToPid(pid)
+    } else {
+        down?.post(tap: .cghidEventTap)
+        up?.post(tap: .cghidEventTap)
+    }
 }
 
 // MARK: - Silent audio keep-alive
@@ -153,20 +165,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// The running PowerPoint / Keynote process, if any.
+    ///
+    /// Deliberately *not* `frontmostApplication`: while sharing in Teams the
+    /// frontmost app is Teams' share toolbar, not the slideshow.
+    private func presentationApp() -> NSRunningApplication? {
+        NSWorkspace.shared.runningApplications.first {
+            guard let id = $0.bundleIdentifier else { return false }
+            return powerPointBundleIDs.contains(id)
+        }
+    }
+
     private func handle(_ key: SlideKey, source: String) -> MPRemoteCommandHandlerStatus {
         NSLog("PPTRemote: received \(source)")
 
-        guard enabled else { return .commandFailed }
+        // Even when we ignore a press we report success. Returning
+        // .commandFailed makes macOS treat us as a dead Now Playing client and
+        // hand the headset buttons to whoever else is playing audio - during a
+        // Teams call, that is Teams.
+        guard enabled else { return .success }
+
+        var targetPid: pid_t?
 
         if powerPointOnly {
-            let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
-            guard powerPointBundleIDs.contains(front) else {
-                NSLog("PPTRemote: ignoring, frontmost is \(front)")
-                return .commandFailed
+            guard let app = presentationApp() else {
+                NSLog("PPTRemote: ignoring, no PowerPoint/Keynote running")
+                return .success
             }
+            targetPid = app.processIdentifier
         }
 
-        sendKey(key)
+        sendKey(key, toPid: targetPid)
 
         // Keep the system believing we are still playing, otherwise the next
         // button press may not be routed to us.
@@ -182,7 +211,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let menu = NSMenu()
         menu.addItem(item("Enabled", #selector(toggleEnabled), enabled))
-        menu.addItem(item("Only in PowerPoint / Keynote", #selector(togglePPTOnly), powerPointOnly))
+        menu.addItem(item("Send only to PowerPoint / Keynote", #selector(togglePPTOnly), powerPointOnly))
         menu.addItem(item("Silent audio keep-alive", #selector(toggleSilence), silenceEnabled))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
