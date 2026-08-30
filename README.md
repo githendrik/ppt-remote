@@ -45,10 +45,24 @@ PPTRemote turns the buttons on your Bluetooth headphones into slide controls. Th
 ## ⚡ Sixty Second Setup
 
 ```sh
-brew install githendrik/tap/ppt-remote
+brew tap githendrik/tap
+brew trust githendrik/tap
+brew install ppt-remote
+
 ln -sfn "$(brew --prefix)/opt/ppt-remote/PPTRemote.app" /Applications/PPTRemote.app
 open /Applications/PPTRemote.app
 ```
+
+<details>
+<summary>🤨 Why <code>brew trust</code>?</summary>
+
+Homebrew 6 refuses to run code from third-party taps until you say so — a good
+default, since a formula is just Ruby that executes on your machine. You'll get
+`Refusing to load formula ... from untrusted tap` without it. Read
+[the formula](https://github.com/githendrik/homebrew-tap/blob/main/Formula/ppt-remote.rb)
+first if you like; it's 40 lines and it calls `build.sh`.
+
+</details>
 
 <details>
 <summary>🙅 Prefer to clone it yourself?</summary>
@@ -64,6 +78,9 @@ cd ppt-remote
 Homebrew compiles it **on your machine**, which is the entire trick: locally
 built binaries are never quarantined, so there's no "unidentified developer"
 dialog, no `xattr` incantation, and no $99/year Apple tax. 🎩
+
+Upgrades are the usual `brew upgrade ppt-remote`. ⚠️ Each upgrade rebuilds and
+re-signs the app, which **invalidates the Accessibility grant** — see below.
 
 Launch it. Grant **Accessibility** when macOS asks (System Settings → Privacy & Security → Accessibility). Without that, macOS blocks synthetic key events and the app sits there looking innocent while doing absolutely nothing. 🙈
 
