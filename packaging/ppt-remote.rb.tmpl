@@ -1,0 +1,42 @@
+class PptRemote < Formula
+  desc "Control PowerPoint and Keynote slides with Bluetooth headphone buttons"
+  homepage "https://github.com/githendrik/ppt-remote"
+  url "https://github.com/githendrik/ppt-remote/releases/download/v@@VERSION@@/ppt-remote-@@VERSION@@.tar.gz"
+  sha256 "@@SHA256@@"
+
+  depends_on macos: :ventura
+
+  # Built from source on the installing machine, so the bundle is never
+  # quarantined by Gatekeeper and no notarisation is required.
+  def install
+    ENV["PPTREMOTE_VERSION"] = version.to_s
+    system "./build.sh", "--no-install"
+    prefix.install "PPTRemote.app"
+  end
+
+  def caveats
+    <<~EOS
+      PPTRemote is a menu bar app. Link it into /Applications so Launchpad and
+      Spotlight can find it, and so the Accessibility grant sticks to a stable
+      path:
+
+        ln -sfn #{opt_prefix}/PPTRemote.app /Applications/PPTRemote.app
+
+      Then launch it and grant Accessibility permission when macOS asks:
+      System Settings -> Privacy & Security -> Accessibility.
+
+      The app is ad-hoc signed, so its signature changes on every upgrade.
+      If it stops responding after an upgrade, remove the PPTRemote entry in
+      Accessibility with "-" and add it again.
+    EOS
+  end
+
+  test do
+    app = prefix/"PPTRemote.app"
+    assert_path_exists app/"Contents/MacOS/PPTRemote"
+    assert_match version.to_s,
+                 shell_output("/usr/libexec/PlistBuddy -c " \
+                              "'Print :CFBundleShortVersionString' " \
+                              "'#{app}/Contents/Info.plist'")
+  end
+end

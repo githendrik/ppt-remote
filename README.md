@@ -45,10 +45,25 @@ PPTRemote turns the buttons on your Bluetooth headphones into slide controls. Th
 ## ⚡ Sixty Second Setup
 
 ```sh
+brew install githendrik/tap/ppt-remote
+ln -sfn "$(brew --prefix)/opt/ppt-remote/PPTRemote.app" /Applications/PPTRemote.app
+open /Applications/PPTRemote.app
+```
+
+<details>
+<summary>🙅 Prefer to clone it yourself?</summary>
+
+```sh
 git clone https://github.com/githendrik/ppt-remote.git
 cd ppt-remote
 ./build.sh
 ```
+
+</details>
+
+Homebrew compiles it **on your machine**, which is the entire trick: locally
+built binaries are never quarantined, so there's no "unidentified developer"
+dialog, no `xattr` incantation, and no $99/year Apple tax. 🎩
 
 Launch it. Grant **Accessibility** when macOS asks (System Settings → Privacy & Security → Accessibility). Without that, macOS blocks synthetic key events and the app sits there looking innocent while doing absolutely nothing. 🙈
 
@@ -61,9 +76,9 @@ Look for `▶︎` in your menu bar. **Congratulations. You are now a cyborg.** �
 - Xcode command line tools — `xcode-select --install`
 - Bluetooth headphones with at least one button
 
-`build.sh` compiles, ad-hoc signs, and installs to `/Applications`. Use `--no-install` to build in place.
+`build.sh` compiles, ad-hoc signs, and installs to `/Applications`. Use `--no-install` to build in place. Set `PPTREMOTE_ARCHS="arm64 x86_64"` for a universal bundle.
 
-⚠️ Rebuilding changes the ad-hoc signature, which invalidates the Accessibility grant. If it mysteriously stops working after a rebuild, remove the entry with `−` and re-add `/Applications/PPTRemote.app`.
+⚠️ Rebuilding (or upgrading via brew) changes the ad-hoc signature, which invalidates the Accessibility grant. If it mysteriously stops working afterwards, remove the entry with `−` and re-add `/Applications/PPTRemote.app`.
 
 </details>
 
